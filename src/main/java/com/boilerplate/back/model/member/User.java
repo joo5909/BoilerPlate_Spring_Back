@@ -38,6 +38,9 @@ public class User {
     @Column
     private String profileImage;
 
-    @Column(nullable = false, columnDefinition = "DATETIME DEFAULT NOW()")
+    @Column(nullable = false)
+    private String agreed_personal;
+
+    @Column(nullable = false, columnDefinition = "DATETIME DEFAULT NOW()", insertable = false, updatable = false)
     private LocalDateTime regdate;
 }

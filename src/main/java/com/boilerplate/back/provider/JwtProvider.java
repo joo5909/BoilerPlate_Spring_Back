@@ -34,12 +34,12 @@ public class JwtProvider {
     @Autowired
     private RedisTemplate<String, String> redisTemplate;
 
-    public AccessTokenResponse createAccessToken(String userId) {
+    public AccessTokenResponse createAccessToken(String email) {
         Date expiredDate = Date.from(Instant.now().plus(accessTokenExpirationTime, ChronoUnit.SECONDS));
         Key key = Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
         String accessToken = Jwts.builder()
                 .signWith(key)
-                .subject(userId)
+                .subject(email)
                 .expiration(expiredDate)
                 .compact();
         return new AccessTokenResponse(accessToken, accessTokenExpirationTime);
@@ -73,31 +73,31 @@ public class JwtProvider {
         }
     }
 
-    // RefreshToken 저장소에서 userId 가져오기
+    // RefreshToken 저장소에서 email 가져오기
     public String getSubjectFromRedis(String refreshToken) {
-        // Redis에서 refreshToken을 키로 사용하여 userId를 조회
-        String userId = redisTemplate.opsForValue().get(refreshToken);
-        return userId != null ? userId : null;
+        // Redis에서 refreshToken을 키로 사용하여 email 조회
+        String email = redisTemplate.opsForValue().get(refreshToken);
+        return email != null ? email : null;
     }
 
     // RefreshToken 저장소 업데이트
-    public void updateRefreshTokenInRedis(String userId, String oldRefreshToken, String newRefreshToken) {
+    public void updateRefreshTokenInRedis(String email, String oldRefreshToken, String newRefreshToken) {
 
         String existingRefreshValue = redisTemplate.opsForValue().get(oldRefreshToken);
 
         if (existingRefreshValue != null) {
             // 기존 RefreshToken이 있으면 삭제
             redisTemplate.delete(oldRefreshToken);
-            System.out.println("Existing RefreshToken deleted for userId: " + userId);
+            System.out.println("Existing RefreshToken deleted for email: " + email);
         }
 
-        redisTemplate.opsForValue().set(newRefreshToken, userId, refreshTokenExpirationTime, TimeUnit.SECONDS); // 7일간 유효
+        redisTemplate.opsForValue().set(newRefreshToken, email, refreshTokenExpirationTime, TimeUnit.SECONDS); // 7일간 유효
     }
 
     // RefreshToken 저장소 입력
-    public void insertRefreshTokenInRedis(String userId, String newRefreshToken) {
+    public void insertRefreshTokenInRedis(String email, String newRefreshToken) {
         //기존 토큰 살아있어도, 새로 발급. (기존토큰은 일주일뒤 자동삭제.. 로그인시에는 기존 토큰값 알수가 없음)
-        redisTemplate.opsForValue().set(newRefreshToken, userId, refreshTokenExpirationTime, TimeUnit.SECONDS); // 7일간 유효
+        redisTemplate.opsForValue().set(newRefreshToken, email, refreshTokenExpirationTime, TimeUnit.SECONDS); // 7일간 유효
     }
 
 

@@ -12,6 +12,7 @@ public interface ResponseCode {
     String DUPLICATE_TEL_NUMBER = "DT";
     String NOT_EXISTED_USER = "NU";
     String NOT_EXISTED_BOARD = "NB";
+    String INTERNAL_ERROR = "ERROR";
 
     // Http Status 401
     String SIGN_IN_FAIL = "SF";
@@ -22,5 +23,6 @@ public interface ResponseCode {
 
     // Http Status 500
     String DATABASE_ERROR = "DBE";
+
 
 }

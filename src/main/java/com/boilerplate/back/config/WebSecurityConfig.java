@@ -42,13 +42,14 @@ public class WebSecurityConfig {
                         .anyRequest().authenticated())
                 .exceptionHandling(exceptionHandling -> exceptionHandling.authenticationEntryPoint(new FailedAuthenticationEntryPoint()))
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+
         return http.build();
     }
 
     @Bean
     protected CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.addAllowedOrigin("http://localhost:3000"); // Frontend 주소 추가
+        configuration.addAllowedOrigin("http://localhost:3000"); // 프론트엔드의 주소
         configuration.addAllowedMethod("*"); // 모든 메서드 허용
         configuration.addAllowedHeader("*"); // 모든 헤더 허용
         configuration.setAllowCredentials(true); // 쿠키 전송 허용
@@ -58,6 +59,8 @@ public class WebSecurityConfig {
         return source;
     }
 }
+
+
 
 class FailedAuthenticationEntryPoint implements AuthenticationEntryPoint {
     @Override

@@ -11,6 +11,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
@@ -43,10 +44,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 return;
             }
 
-            String userId;
+            String userEmail;
 
             try {
-                userId = jwtProvider.validateAccessToken(accessToken); // AccessToken 검증
+                userEmail = jwtProvider.validateAccessToken(accessToken); // AccessToken 검증
             } catch (ExpiredJwtException e) {
 
                 // AccessToken 만료 시 쿠키에 있는 RefreshToken 가져옴
@@ -54,9 +55,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 if (refreshToken != null && jwtProvider.validateRefreshToken(refreshToken)) {
 
                     //redis에 있는지 확인
-                    userId = jwtProvider.getSubjectFromRedis(refreshToken); // userId 추출
+                    userEmail = jwtProvider.getSubjectFromRedis(refreshToken); // userId 추출
 
-                    AccessTokenResponse newAccessTokenResponse = jwtProvider.createAccessToken(userId);
+                    AccessTokenResponse newAccessTokenResponse = jwtProvider.createAccessToken(userEmail);
                     RefreshTokenResponse newRefreshTokenResponse = jwtProvider.createRefreshToken();
 
                     // 새 AccessToken 및 RefreshToken 생성
@@ -65,7 +66,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     String newRefreshToken = newRefreshTokenResponse.getRefreshToken();
 
                     // 새 RefreshToken 저장소 업데이트
-                    jwtProvider.updateRefreshTokenInRedis(userId, refreshToken, newRefreshToken);
+                    jwtProvider.updateRefreshTokenInRedis(userEmail, refreshToken, newRefreshToken);
 
                     // 새 RefreshToken을 HttpOnly 쿠키로 설정
                     Cookie newRefreshTokenCookie = new Cookie("refreshToken", newRefreshToken);
@@ -77,6 +78,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     // 응답에 쿠키 추가
                     response.addCookie(newRefreshTokenCookie);
 
+                    // 새 AccessToken을 응답 헤더에 추가
+                    response.setHeader("Authorization", "Bearer " + newAccessToken);
+
                 } else {
                     // 쿠키에 있는 RefreshToken 값이 없거나 유효하지 않을시 401 에러
                     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);  // 인증 실패
@@ -86,12 +90,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
 
             // 유효한 AccessToken에 대해 SecurityContext 설정
-            if (userId != null) {
+            if (userEmail != null) {
                 List<GrantedAuthority> authorities = new ArrayList<>();
                 authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
 
                 AbstractAuthenticationToken authenticationToken =
-                        new UsernamePasswordAuthenticationToken(userId, null, authorities);
+                        new UsernamePasswordAuthenticationToken(userEmail, null, authorities);
 
                 SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
                 securityContext.setAuthentication(authenticationToken);
@@ -123,4 +127,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
         return null;
     }
+
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+        String requestURI = request.getRequestURI();
+        // 필터를 실행하지 않을 경로를 명시
+        return requestURI.startsWith("/api/v1/auth/") || requestURI.startsWith("/api/v1/search/") || requestURI.startsWith("/file/");
+    }
+
+
 }
